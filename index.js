@@ -102,7 +102,7 @@ async function run() {
 
         app.get('/my-donation-requests', verfifyFBToken, async (req, res)=>{
             const email = req.decoded_email;
-            const limit = Number(req.query.limit)
+            // const limit = Number(req.query.limit)
             // const skip = Number(req.query.skip)
             const size = Number(req.query.size)
             const page = Number(req.query.page)
@@ -116,7 +116,7 @@ async function run() {
             res.send({request: result, totalRequest})
         })
 
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
@@ -129,6 +129,6 @@ app.get('/', (req, res) => {
     res.send('Mission SCIC!')
 })
 
-app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
-})
+// app.listen(port, () => {
+//     console.log(`Example app listening on port ${port}`)
+// })
