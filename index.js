@@ -79,10 +79,16 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/users/:email', async (req, res)=>{
-            const email = req.params.email
-            const query = {email:email}
-            const result = await userCollection.findOne(query)
+        app.patch('/update/user/status', verfifyFBToken, async(req, res)=>{
+            const {email, status} = req.query
+            const query = {email: email}
+
+            const updateStatus = {
+                $set: {
+                    status: status
+                }
+            }
+            const result = await userCollection.updateOne(query, updateStatus)
             res.send(result)
         })
 
