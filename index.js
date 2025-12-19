@@ -100,6 +100,21 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/my-donation-requests', verfifyFBToken, async (req, res)=>{
+            const email = req.decoded_email;
+            const limit = Number(req.query.limit)
+            // const skip = Number(req.query.skip)
+            const size = Number(req.query.size)
+            const page = Number(req.query.page)
+            const query = { requesterEmail:email}
+            const result = await requestsCollection.
+            find(query)
+                .limit(size)
+                .skip(size*page)
+                .toArray()
+            const totalRequest = await requestsCollection.countDocuments(query)
+            res.send({request: result, totalRequest})
+        })
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
