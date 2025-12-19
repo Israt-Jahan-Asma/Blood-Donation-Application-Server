@@ -66,12 +66,23 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/users', verfifyFBToken, async (req, res)=>{
+            const result = await userCollection.find().toArray()
+            res.status(200).send(result)
+        })
         app.get('/users/role/:email', async (req, res) => {
             const { email } = req.params
             const query = { email: email }
             const result = await userCollection.findOne(query)
             console.log(result);
 
+            res.send(result)
+        })
+
+        app.get('/users/:email', async (req, res)=>{
+            const email = req.params.email
+            const query = {email:email}
+            const result = await userCollection.findOne(query)
             res.send(result)
         })
 
