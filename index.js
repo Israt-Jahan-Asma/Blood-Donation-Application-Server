@@ -158,6 +158,60 @@ async function run() {
             res.send(result)
 
         })
+
+        app.get('/my-requests-recent', verfifyFBToken, async (req, res) => {
+            const email = req.query.email;
+            const result = await requestsCollection.find({ requesterEmail: email })
+                .sort({ createdAt: -1 })
+                .limit(3)
+                .toArray();
+            res.send(result);
+        });
+
+        app.patch('/requests/status-update/:id', verfifyFBToken, async (req, res) => {
+            const id = req.params.id;
+            const status = req.body.status;
+            const result = await requestsCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { status: status } }
+            );
+            res.send(result);
+        });
+        // Get a single request for editing
+        app.get('/requests/edit/:id', verfifyFBToken, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await requestsCollection.findOne(query);
+            res.send(result);
+        });
+
+        // Update the donation request
+        app.put('/requests/update/:id', verfifyFBToken, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedRequest = req.body;
+            const updateDoc = {
+                $set: {
+                    recipientName: updatedRequest.recipientName,
+                    district: updatedRequest.district,
+                    upazila: updatedRequest.upazila,
+                    hospitalName: updatedRequest.hospitalName,
+                    fullAddress: updatedRequest.fullAddress,
+                    bloodGroup: updatedRequest.bloodGroup,
+                    donationDate: updatedRequest.donationDate,
+                    donationTime: updatedRequest.donationTime,
+                    requestMessage: updatedRequest.requestMessage,
+                },
+            };
+            const result = await requestsCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+        
+        app.delete('/requests/:id', verfifyFBToken, async (req, res) => {
+            const result = await requestsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+            res.send(result);
+        });
+
         // Update user profile information
         app.patch('/users/update/:email', verfifyFBToken, async (req, res) => {
             const email = req.params.email;
