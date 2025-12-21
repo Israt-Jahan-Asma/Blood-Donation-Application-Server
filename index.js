@@ -72,6 +72,45 @@ async function run() {
         const requestsCollection = database.collection('requests')
         const paymentsCollection = database.collection ('payments')
 
+
+        // 1. Get ALL PENDING requests for the public page
+        app.get('/requests-public', async (req, res) => {
+           
+            const query = { status: 'pending' };
+            const result = await requestsCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        // 2. Get SINGLE request details by ID
+        
+        const { ObjectId } = require('mongodb');
+
+        app.get('/request-details/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await requestsCollection.findOne(query);
+            if (!result) {
+                return res.status(404).send({ message: "Request not found" });
+            }
+            res.send(result);
+        });
+
+        // 3. Update status from 'pending' to 'inprogress'
+        app.patch('/requests/confirm/:id', verfifyFBToken, async (req, res) => {
+            const id = req.params.id;
+            const donorData = req.body; git ad
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: 'inprogress',
+                    donorName: donorData.name,
+                    donorEmail: donorData.email
+                }
+            };
+
+            const result = await requestsCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
         app.post('/users', async (req, res) => {
 
             const userInfo = req.body
