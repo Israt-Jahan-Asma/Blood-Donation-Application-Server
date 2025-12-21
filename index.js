@@ -98,7 +98,7 @@ async function run() {
         // 3. Update status from 'pending' to 'inprogress'
         app.patch('/requests/confirm/:id', verfifyFBToken, async (req, res) => {
             const id = req.params.id;
-            const donorData = req.body; git ad
+            const donorData = req.body; 
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -111,9 +111,16 @@ async function run() {
             const result = await requestsCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
+
         app.post('/users', async (req, res) => {
 
             const userInfo = req.body
+            const query = { email: userInfo.email };
+            const existingUser = await userCollection.findOne(query);
+            if (existingUser) {
+                return res.send({ message: 'User already exists', insertedId: null });
+            }
+
             userInfo.createdAt = new Date()
             userInfo.role = 'donor'
             userInfo.status = 'active'
@@ -151,7 +158,20 @@ async function run() {
             res.send(result)
 
         })
+        // Update user profile information
+        app.patch('/users/update/:email', verfifyFBToken, async (req, res) => {
+            const email = req.params.email;
+            const updatedData = req.body;
+            delete updatedData.email;
 
+            const filter = { email: email };
+            const updateDoc = {
+                $set: updatedData
+            };
+
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
         // create request
 
         app.post('/requests', verfifyFBToken, async (req, res) => {
