@@ -200,16 +200,47 @@ async function run() {
         app.get('/admin-stats', verfifyFBToken, async (req, res) => {
             const totalDonors = await userCollection.countDocuments({ role: 'donor' });
             const totalRequests = await requestsCollection.countDocuments();
-            const fundingData = await paymentsCollection.aggregate([{ $group: { _id: null, totalAmount: { $sum: "$amount" } } }]).toArray();
+            
+            const fundingData = await paymentsCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalAmount: { $sum: "$amount" }
+                    }
+                }
+            ]).toArray();
+
             res.send({ totalDonors, totalRequests, totalFunding: fundingData[0]?.totalAmount || 0 });
         });
 
+        app.get('/funds', verfifyFBToken, async (req, res) => {
+            try {
+                const result = await paymentsCollection.find().sort({ paidAt: -1 }).toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch funds" });
+            }
+        });
+
         app.post('/create-payment-checkout', async (req, res) => {
-            const info = req.body;
+            const { donateAmount, donorEmail, donorName } = req.body;
+            const amount = parseInt(donateAmount) * 100;
             const session = await stripe.checkout.sessions.create({
-                line_items: [{ price_data: { currency: 'usd', unit_amount: parseInt(info.donateAmount) * 100, product_data: { name: 'Blood Donation Fund' } }, quantity: 1 }],
+                line_items: [
+                    {
+                        price_data: {
+                            currency: 'usd',
+                            unit_amount: amount,
+                            product_data: { name: 'Blood Donation Fund' }
+                        },
+                        quantity: 1,
+                    },
+                ],
                 mode: 'payment',
-                customer_email: info.donorEmail,
+                customer_email: donorEmail || undefined,
+                metadata: {
+                    donorName: donorName || "Anonymous"
+                },
                 success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.SITE_DOMAIN}/payment-canceled`
             });
@@ -217,17 +248,31 @@ async function run() {
         });
 
         app.post('/success-payment', async (req, res) => {
-            const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
-            if (session.payment_status === 'paid') {
-                const isExist = await paymentsCollection.findOne({ transactionId: session.payment_intent });
-                if (isExist) return res.send({ message: "Already processed" });
-                const result = await paymentsCollection.insertOne({
-                    amount: session.amount_total / 100,
-                    donorEmail: session.customer_email,
-                    transactionId: session.payment_intent,
-                    paidAt: new Date()
-                });
-                res.send(result);
+            const { session_id } = req.query;
+
+            try {
+                const session = await stripe.checkout.sessions.retrieve(session_id);
+
+                if (session.payment_status === 'paid') {
+                    const transactionId = session.payment_intent;
+
+                    const isExist = await paymentsCollection.findOne({ transactionId });
+                    if (isExist) return res.send({ message: "Already processed" });
+
+                    const result = await paymentsCollection.insertOne({
+                        amount: session.amount_total / 100,
+                        donorEmail: session.customer_email,
+                        donorName: session.metadata?.donorName || "Anonymous",
+                        transactionId: transactionId,
+                        paidAt: new Date()
+                    });
+
+                    res.send(result);
+                } else {
+                    res.status(400).send({ message: "Payment not completed" });
+                }
+            } catch (error) {
+                res.status(500).send({ message: "Server error" });
             }
         });
 
