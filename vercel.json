@@ -1,9 +1,8 @@
 {
     "version": 2,
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/index.js"
+    "functions": {
+        "index.js": {
+            "runtime": "nodejs18.x"
         }
-    ]
+    }
 }

@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000
 const stripe = require('stripe')(process.env.STRIPE_SECRET)
 
 // Middleware
-app.use(cors())
+app.use(cors('https://blood-donation-application-react.netlify.app/'))
 app.use(express.json())
 
 // Firebase Admin Setup
