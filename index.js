@@ -252,8 +252,8 @@ async function run() {
                 metadata: {
                     donorName: donorName || "Anonymous"
                 },
-                success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.SITE_DOMAIN}/payment-canceled`
+                success_url: `${process.env.SITE_DOMAIN}payment-success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.SITE_DOMAIN}payment-canceled`
             });
             res.send({ url: session.url });
         });
