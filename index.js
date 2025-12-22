@@ -158,10 +158,30 @@ async function run() {
             res.send(result)
 
         })
+        // Update user role (Donor to Volunteer / Volunteer to Admin etc.)
+        app.patch('/update/user/role', verfifyFBToken, async (req, res) => {
+            const { email, role } = req.query;
+            const query = { email: email };
+            const updateRole = {
+                $set: {
+                    role: role
+                }
+            };
+            const result = await userCollection.updateOne(query, updateRole);
+            res.send(result);
+        });
 
         app.get('/my-requests-recent', verfifyFBToken, async (req, res) => {
             const email = req.query.email;
-            const result = await requestsCollection.find({ requesterEmail: email })
+            const { role } = req.query;
+
+            let query = {};
+            // If donor, only show their own. If admin/volunteer, show all.
+            if (role === 'donor') {
+                query = { requesterEmail: email };
+            }
+
+            const result = await requestsCollection.find(query) // Use the dynamic query here
                 .sort({ createdAt: -1 })
                 .limit(3)
                 .toArray();
@@ -206,7 +226,7 @@ async function run() {
             const result = await requestsCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
-        
+
         app.delete('/requests/:id', verfifyFBToken, async (req, res) => {
             const result = await requestsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
             res.send(result);
@@ -255,6 +275,29 @@ async function run() {
 
         })
 
+        // Get ALL requests (for Admin/Volunteer)
+        app.get('/all-donation-requests', verfifyFBToken, async (req, res) => {
+            const size = Number(req.query.size) || 10;
+            const page = Number(req.query.page) || 0;
+
+            // Check if requester is Admin or Volunteer
+            const userEmail = req.decoded_email;
+            const user = await userCollection.findOne({ email: userEmail });
+
+            if (user?.role !== 'admin' && user?.role !== 'volunteer') {
+                return res.status(403).send({ message: "Unauthorized access" });
+            }
+
+            const result = await requestsCollection.find()
+                .sort({ createdAt: -1 })
+                .limit(size)
+                .skip(size * page)
+                .toArray();
+
+            const totalRequest = await requestsCollection.countDocuments();
+            res.send({ request: result, totalRequest });
+        });
+
         app.get ('/search', async (req, res)=>{
             const {bloodGroup, district, upazila} = req.query
             const query = {}
@@ -275,6 +318,33 @@ async function run() {
             res.send(result)
 
         })
+
+        app.get('/admin-stats', verfifyFBToken, async (req, res) => {
+            // 1. Count Total Donors
+            const totalDonors = await userCollection.countDocuments({ role: 'donor' });
+
+            // 2. Count Total Donation Requests
+            const totalRequests = await requestsCollection.countDocuments();
+
+            // 3. Calculate Total Funding (Sum of all payments)
+            const fundingData = await paymentsCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalAmount: { $sum: "$amount" }
+                    }
+                }
+            ]).toArray();
+
+            const totalFunding = fundingData.length > 0 ? fundingData[0].totalAmount : 0;
+
+            res.send({
+                totalDonors,
+                totalRequests,
+                totalFunding
+            });
+        });
+
         //payments
         app.post('/create-payment-checkout', async (req, res) => {
             const information = req.body
