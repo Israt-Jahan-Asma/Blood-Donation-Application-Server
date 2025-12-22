@@ -293,4 +293,5 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => res.send('Mission SCIC Server Running'));
-app.listen(port, () => console.log(`Server on port ${port}`));
+// app.listen(port, () => console.log(`Server on port ${port}`));
+module.exports = app;
